@@ -2,9 +2,11 @@ package models
 
 import (
 	"errors"
-	"github.com/generate_cv/pkg/image"
+
+	"github.com/Domains18/cv-generator/pkg/image"
 )
 
+// User type, based on the JSON input from the client
 type User struct {
 	PersonalInfo struct {
 		Name      string `json:"name"`
@@ -13,7 +15,7 @@ type User struct {
 		Email     string `json:"email"`
 		Phone     string `json:"phone"`
 		Github    string `json:"github"`
-		LinkedIn  string `json:"linkedIn"`
+		Linkedin  string `json:"linkedin"`
 		Twitter   string `json:"twitter"`
 		Location1 string `json:"location_1"`
 		Location2 string `json:"location_2"`
@@ -37,29 +39,30 @@ type User struct {
 		Education struct {
 			Label string `json:"label"`
 			Lists []struct {
-				Instruction   string `json:"instruction"`
-				Major         string `json:"major"`
-				Level         string `json:"level"`
-				Gpa           string `json:"gpa"`
-				StartedPeriod string `json:"started_period"`
-				EndPeriod     string `json:"end_period"`
-				Location      string `json:"location"`
-				Descriptions  string `json:"descriptions"`
+				Institution  string   `json:"institution"`
+				Major        string   `json:"major"`
+				Level        string   `json:"level"`
+				Gpa          string   `json:"gpa"`
+				StartPeriod  string   `json:"start_period"`
+				EndPeriod    string   `json:"end_period"`
+				Location     string   `json:"location"`
+				Descriptions []string `json:"descriptions"`
 			} `json:"lists"`
 		} `json:"education"`
 		Extracurricular struct {
 			Label string `json:"label"`
 			Lists []struct {
-				Institution  string `json:"institution"`
-				Position     string `json:"position"`
-				StartPeriod  string `json:"start_period"`
-				EndPeriod    string `json:"end_period"`
-				Descriptions string `json:"descriptions"`
+				Institution  string   `json:"institution"`
+				Position     string   `json:"position"`
+				StartPeriod  string   `json:"start_period"`
+				EndPeriod    string   `json:"end_period"`
+				Location     string   `json:"location"`
+				Descriptions []string `json:"descriptions"`
 			} `json:"lists"`
 		} `json:"extracurricular"`
 		Skills struct {
-			Label        string `json:"label"`
-			Descriptions string `json:"descriptions"`
+			Label        string   `json:"label"`
+			Descriptions []string `json:"descriptions"`
 		} `json:"skills"`
 		Projects struct {
 			Label string `json:"label"`
@@ -81,9 +84,10 @@ type User struct {
 	} `json:"main_section"`
 }
 
+// Modify will change the value of the profile picture section into directory to the image file
 func (u *User) Modify(dirname string, output string) error {
 	imageData := u.PersonalInfo.Picture
-	if imageData != ""{
+	if imageData != "" {
 		var newImage string
 		checkUrl := image.IsUrl(imageData)
 		if checkUrl {
@@ -94,11 +98,13 @@ func (u *User) Modify(dirname string, output string) error {
 			u.PersonalInfo.Picture = newImage
 			return err
 		}
-		if output == "app" && image.IsImageFileExist(imageData){
+
+		if output == "app" && image.IsImageFileExist(imageData) {
 			return nil
 		}
-		if output == "app" && !image.IsImageFileExist(imageData){
-			return errors.New("directory or file does not exist")
+
+		if output == "app" && !image.IsImageFileExist(imageData) {
+			return errors.New("directory or files not exist")
 		}
 
 		newImage, err := image.ImageFromBase64(imageData, dirname)
@@ -108,5 +114,6 @@ func (u *User) Modify(dirname string, output string) error {
 		u.PersonalInfo.Picture = newImage
 		return err
 	}
+
 	return nil
 }

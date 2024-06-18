@@ -2,7 +2,7 @@ package utils
 
 import (
 	"bytes"
-	"io"
+	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
@@ -14,18 +14,18 @@ func JsonInput(fname string) []byte {
 	if err != nil {
 		log.Println(err)
 	}
-	byteValue, _ := io.ReadAll(jsonFile) //ioutil.ReadAll is deprecated
+	byteValue, _ := ioutil.ReadAll(jsonFile)
 	return byteValue
 }
 
-func RemoveFiles(fileName string){
+func RemoveFiles(fileName string) {
 	e := os.RemoveAll(filepath.Dir(fileName))
 	if e != nil {
 		panic(e)
 	}
 }
 
-func RunCommand(command string, stdout, stderr *bytes.Buffer, args ...string) error{
+func RunCommand(command string, stdout, stderr *bytes.Buffer, args ...string) error {
 	cmd := exec.Command(command, args...)
 	if stdout != nil {
 		cmd.Stdout = stdout

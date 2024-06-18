@@ -9,7 +9,6 @@ import (
 	"image/jpeg"
 	"image/png"
 	"io"
-	"log"
 	"net/http"
 	"net/url"
 	"os"
@@ -17,7 +16,7 @@ import (
 	"strings"
 )
 
-func StringInSlice(a string, list []string) bool {
+func stringInSlice(a string, list []string) bool {
 	for _, b := range list {
 		if b == a {
 			return true
@@ -26,13 +25,13 @@ func StringInSlice(a string, list []string) bool {
 	return false
 }
 
-func Mimecheck(response http.Response) (string, error) {
+func mimeCheck(response http.Response) (string, error) {
 	contentType := strings.Split(response.Header.Get("Content-Type"), ";")[0]
 	extension := strings.Split(contentType, "/")[1]
-	if StringInSlice(extension, []string{"jpeg", "jpg", "png", "webpg"}) {
+	if stringInSlice(extension, []string{"jpeg", "jpg", "png"}) {
 		return extension, nil
 	}
-	return "", errors.New("the selected field does not have a proper image extension")
+	return "", errors.New("the requested file does not have a proper image extension, please use .jpg or .png only")
 }
 
 func IsUrl(str string) bool {
@@ -49,80 +48,78 @@ func IsImageFileExist(path string) bool {
 }
 
 func ImageFromUrl(URL, dirName string) (string, error) {
+	//Get the response bytes from the url
 	response, err := http.Get(URL)
 	if err != nil {
 		return "", err
 	}
-	defer func(Body io.ReadCloser) {
-		err := Body.Close()
-		if err != nil {
-		}
-	}(response.Body)
+	defer response.Body.Close()
+
 	if response.StatusCode != 200 {
-		return "", errors.New("status not okay received")
+		return "", errors.New("received non 200 response code")
 	}
-	fileExt, err := Mimecheck(*response)
+	//Check MIME type
+	fileExt, err := mimeCheck(*response)
 	if err != nil {
 		return "", err
 	}
-	imageName := fmt.Sprintf("Image.%s", fileExt)
+	//Create a empty file
+	imageName := fmt.Sprintf("image.%s", fileExt)
 	fileName := filepath.Join(dirName, imageName)
 	file, err := os.Create(fileName)
 	if err != nil {
 		return "", err
 	}
-	defer func(file *os.File) {
-		err := file.Close()
-		if err != nil {
-			log.Fatal("at log fatal", err)
-		}
-	}(file)
+	defer file.Close()
 
+	//Write the bytes to the file
 	_, err = io.Copy(file, response.Body)
 	if err != nil {
 		return "", err
 	}
+
 	return fileName, err
 }
 
-func ImageFromBase64(based64String string, dirName string) (string, error) {
-	trimmedBased64String := strings.TrimPrefix(based64String, "data:image/jpeg;base64")
-	trimmedBased64String = strings.TrimPrefix(trimmedBased64String, "data:image/png;base64")
-	imageData, err := base64.StdEncoding.DecodeString(trimmedBased64String)
+func ImageFromBase64(base64String string, dirName string) (string, error) {
+	// Convert base64 string into byte
+	trimmedBase64String := strings.TrimPrefix(base64String, "data:image/jpeg;base64,")
+	trimmedBase64String = strings.TrimPrefix(trimmedBase64String, "data:image/png;base64,")
+	imageData, err := base64.StdEncoding.DecodeString(trimmedBase64String)
 	if err != nil {
 		return "", err
 	}
-	parts := strings.Split(based64String, ",")
+
+	// Get image extension
+	parts := strings.Split(base64String, ",")
 	metadata := parts[0]
-	typedAndEncoding := strings.Split(metadata, ",")
-	fileType := typedAndEncoding[1]
+	typeAndEncoding := strings.Split(metadata, ":")
+	fileType := typeAndEncoding[1]
 	base64Extension := strings.Split(fileType, "/")[1]
 	extension := strings.Split(base64Extension, ";")[0]
 
+	// Create image file
 	imageName := filepath.Join(dirName, "image."+extension)
 	f, err := os.Create(imageName)
 	if err != nil {
 		return "", err
 	}
-	defer func(f *os.File) {
-		err := f.Close()
-		if err != nil {
-			log.Fatal("error", err)
-		}
-	}(f)
+	defer f.Close()
 
+	// Create an image.Image from the decoded data
 	img, _, err := image.Decode(bytes.NewReader(imageData))
 	if err != nil {
 		return "", err
 	}
+
+	// Save the image to the file with the appropriate format
 	switch extension {
 	case "jpeg":
-
 		err = jpeg.Encode(f, img, &jpeg.Options{Quality: 75})
-	case "jpg":
+	case "png":
 		err = png.Encode(f, img)
 	default:
-		err = fmt.Errorf("unsopported image format: %s", extension)
+		err = fmt.Errorf("unsupported image format: %s", extension)
 	}
 	if err != nil {
 		return "", err

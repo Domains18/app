@@ -1,0 +1,4 @@
+Dockerfile
+*.md
+*.cls
+**/node_modules
